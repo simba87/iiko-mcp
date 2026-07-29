@@ -729,6 +729,48 @@ async def get_checks_handler(args):
           "kassa": {"type": "integer", "description": "Cash register: 4=Пойду/Поем, 5=Дэсу."},
           "time": {"type": "string", "description": "Target time in HH:MM format. Defaults to current Moscow time."}
       })
+async def get_revenue_at_time_handler(args):
+    """Get revenue up to a specific time on a given date."""
+    from datetime import datetime, timezone, timedelta
+    msk = timezone(timedelta(hours=3))
+    now = datetime.now(msk)
+    date = args.get("date") or now.strftime("%Y-%m-%d")
+    kassa = args.get("kassa")
+    target_time = args.get("time") or now.strftime("%H:%M")
+
+    if not kassa:
+        return {"error": "kassa is required (4=PP, 5=Desu)"}
+
+    # Fetch checks via get_checks handler
+    checks_result = await get_checks_handler({"date": date, "kassa": int(kassa)})
+    if isinstance(checks_result, dict) and "error" in checks_result:
+        return checks_result
+
+    checks = checks_result if isinstance(checks_result, list) else checks_result.get("checks", [])
+    
+    # Filter by CloseTime <= target_time and sum amounts
+    revenue = 0
+    count = 0
+    for check in checks:
+        close_time = check.get("CloseTime", "")
+        if close_time and close_time <= target_time:
+            amount = check.get("sum", 0) or check.get("amount", 0) or 0
+            if isinstance(amount, str):
+                try:
+                    amount = float(amount)
+                except ValueError:
+                    amount = 0
+            revenue += amount
+            count += 1
+
+    return {
+        "date": date,
+        "kassa": int(kassa),
+        "time": target_time,
+        "revenue": round(revenue, 2),
+        "checks_count": count
+    }
+
 async def raw_request_handler(args):
     method = args.get("method", "GET").upper()
     path = args.get("path", "")
