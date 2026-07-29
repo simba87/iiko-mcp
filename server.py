@@ -748,7 +748,7 @@ async def get_revenue_at_time_handler(args):
     count = 0
     for check in checks:
         close_time = check.get("CloseTime", "")
-        if close_time and close_time <= target_time:
+        if close_time and close_time[:5] <= target_time:
             amount = check.get("sum", 0) or check.get("amount", 0) or 0
             if isinstance(amount, str):
                 try:
