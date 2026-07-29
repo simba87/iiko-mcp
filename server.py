@@ -722,7 +722,12 @@ async def get_checks_handler(args):
             } for c in checks]
         }
     return result
-@tool("get_revenue_at_time", "Get revenue up to a specific time. Args: date, kassa, time (HH:MM).")
+@tool("get_revenue_at_time", "Get revenue up to a specific time. Args: date, kassa, time (HH:MM).",
+      {"type": "object", "properties": {
+          "date": {"type": "string", "description": "Date YYYY-MM-DD. Defaults to today."},
+          "kassa": {"type": "integer", "description": "Cash register: 4=PP, 5=Desu. Required."},
+          "time": {"type": "string", "description": "Target time HH:MM. Defaults to now."}
+      }, "required": ["kassa"]})
 async def get_revenue_at_time_handler(args):
     """Get revenue up to a specific time on a given date."""
     from datetime import datetime, timezone, timedelta
