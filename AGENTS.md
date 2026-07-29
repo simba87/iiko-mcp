@@ -5,6 +5,7 @@ Instructions for AI agents working on this repository.
 ## Context
 This is an MCP (Model Context Protocol) server for the iiko restaurant management system REST API (iikoServer). It wraps iikoServer endpoints as MCP tools.
 
+- **get_revenue_at_time** — Get revenue up to a specific time on a given date.
 ## Key files
 - `server.py` — main MCP server with all tool definitions
 - `README.md` — user-facing documentation listing all tools

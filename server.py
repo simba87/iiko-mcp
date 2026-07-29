@@ -723,57 +723,12 @@ async def get_checks_handler(args):
         }
     return result
 
-
-@tool("raw_request", "Make a raw authenticated request to any iikoServer endpoint.",
-      {"type": "object", "properties": {
-          "method": {"type": "string", "description": "HTTP method (GET, POST, PUT, DELETE)"},
-          "path": {"type": "string", "description": "API path, e.g. '/resto/api/employees'"},
-          "params": {"type": "object", "description": "Query parameters (key is added automatically)", "additionalProperties": True},
-          "body": {"type": "object", "description": "Request body for POST/PUT", "additionalProperties": True}
-      }, "required": ["method", "path"]})
 @tool("get_revenue_at_time", "Get revenue up to a specific time on a given date. Filters checks where CloseTime <= target_time and sums the amounts.",
       params={
           "date": {"type": "string", "description": "Date in YYYY-MM-DD format. Defaults to today (Moscow time)."},
           "kassa": {"type": "integer", "description": "Cash register: 4=Пойду/Поем, 5=Дэсу."},
           "time": {"type": "string", "description": "Target time in HH:MM format. Defaults to current Moscow time."}
       })
-async def get_revenue_at_time_handler(args):
-    from datetime import datetime, timezone, timedelta
-
-    msk = timezone(timedelta(hours=3))
-    now = datetime.now(msk)
-    date_str = args.get("date") or now.strftime("%Y-%m-%d")
-    time_str = args.get("time") or now.strftime("%H:%M")
-    kassa = args.get("kassa")
-
-    checks = await iiko.get_checks(date=date_str, kassa=kassa, limit=10000)
-
-    # Filter checks where CloseTime <= target_time
-    revenue = 0.0
-    checks_count = 0
-    target_time = datetime.strptime(time_str, "%H:%M").time()
-
-    for check in checks:
-        close_time_str = check.get("CloseTime", "")
-        if not close_time_str:
-            continue
-        try:
-            close_time = datetime.strptime(close_time_str, "%H:%M:%S").time()
-            if close_time <= target_time:
-                revenue += float(check.get("sum", 0) or 0)
-                checks_count += 1
-        except ValueError:
-            continue
-
-    return [TextContent(type="text", text=json.dumps({
-        "date": date_str,
-        "kassa": kassa,
-        "time": time_str,
-        "revenue": round(revenue, 2),
-        "checks_count": checks_count
-    }, ensure_ascii=False, indent=2))]
-
-
 async def raw_request_handler(args):
     method = args.get("method", "GET").upper()
     path = args.get("path", "")
