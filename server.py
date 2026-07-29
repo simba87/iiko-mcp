@@ -29,10 +29,8 @@ IIKO_URL = os.environ.get("IIKO_URL", "https://poidu-poem.iiko.it:443").rstrip("
 IIKO_LOGIN = os.environ.get("IIKO_LOGIN", "")
 IIKO_PASS = os.environ.get("IIKO_PASS", "")
 
-
 def sha1_hex(text: str) -> str:
     return hashlib.sha1(text.encode("utf-8")).hexdigest()
-
 
 # ─── HTTP Client & Auth ─────────────────────────────────────────────────────
 
@@ -100,7 +98,6 @@ class IikoClient:
                 return resp.text
         return resp.text
 
-
 iiko = IikoClient()
 
 # ─── Tool Definitions ───────────────────────────────────────────────────────
@@ -115,14 +112,12 @@ def tool(name: str, description: str, input_schema: dict | None = None):
         return func
     return decorator
 
-
 # ─── System ──────────────────────────────────────────────────────────────────
 
 @tool("ping", "Health check. Returns iikoServer URL, auth state, and token info.")
 async def ping_handler(args):
     status = "authenticated" if iiko.token else "not authenticated"
     return {"url": IIKO_URL, "status": status, "token_prefix": (iiko.token or "")[:8] + "..." if iiko.token else None}
-
 
 ENDPOINT_CATALOG = [
     {"category": "System", "tools": ["ping", "list_endpoints"]},
@@ -147,7 +142,6 @@ ENDPOINT_CATALOG = [
     {"category": "Raw", "tools": ["raw_request"]},
 ]
 
-
 @tool("list_endpoints", "List all available iikoServer MCP tools grouped by category.")
 async def list_endpoints_handler(args):
     result = []
@@ -160,38 +154,31 @@ async def list_endpoints_handler(args):
         result.append(f"### {group['category']}\n" + "\n".join(lines))
     return "\n\n".join(result)
 
-
 # ─── Products / Nomenclature ────────────────────────────────────────────────
 
 @tool("get_products", "Get all products from iikoServer. GET /resto/api/v2/entities/products/list")
 async def get_products_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/products/list")
 
-
 @tool("get_product_groups", "Get all product groups (categories). GET /resto/api/v2/entities/products/group/list")
 async def get_product_groups_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/products/group/list")
-
 
 @tool("get_product_sizes", "Get product sizes/units. GET /resto/api/v2/entities/products/sizes/list")
 async def get_product_sizes_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/products/sizes/list")
 
-
 @tool("get_nomenclature", "Get full nomenclature (products with extra details). Alias for get_products.")
 async def get_nomenclature_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/products/list")
-
 
 @tool("get_corporate_structure", "Get corporate departments structure. GET /resto/api/corporation/departments/")
 async def get_corporate_structure_handler(args):
     return await iiko.request("GET", "/resto/api/corporation/departments/")
 
-
 @tool("get_corporate_groups", "Get corporate groups. GET /resto/api/corporation/groups/")
 async def get_corporate_groups_handler(args):
     return await iiko.request("GET", "/resto/api/corporation/groups/")
-
 
 @tool("search_products", "Search products by name (case-insensitive substring match). Returns matching products.",
       {"type": "object", "properties": {"query": {"type": "string", "description": "Search term to match against product names"}}, "required": ["query"]})
@@ -207,13 +194,11 @@ async def search_products_handler(args):
     matches = [p for p in all_products if query in (p.get("name", "") or "").lower()]
     return {"count": len(matches), "products": matches}
 
-
 # ─── Employees ───────────────────────────────────────────────────────────────
 
 @tool("get_employees", "Get all employees. GET /resto/api/employees")
 async def get_employees_handler(args):
     return await iiko.request("GET", "/resto/api/employees")
-
 
 @tool("get_employee", "Get a single employee by UUID. GET /resto/api/employees/byId/{uuid}",
       {"type": "object", "properties": {"uuid": {"type": "string", "description": "Employee UUID"}}, "required": ["uuid"]})
@@ -223,23 +208,19 @@ async def get_employee_handler(args):
         return {"error": "uuid parameter is required"}
     return await iiko.request("GET", f"/resto/api/employees/byId/{uuid}")
 
-
 @tool("get_employee_roles", "Get employee roles. GET /resto/api/employees/roles")
 async def get_employee_roles_handler(args):
     return await iiko.request("GET", "/resto/api/employees/roles")
 
-
 @tool("get_persons", "Get all persons (users). GET /resto/api/persons")
 async def get_persons_handler(args):
     return await iiko.request("GET", "/resto/api/persons")
-
 
 # ─── Entities ────────────────────────────────────────────────────────────────
 
 @tool("get_entity_types", "List available entity types. GET /resto/api/v2/entities/list")
 async def get_entity_types_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/list")
-
 
 @tool("get_entities", "Get entities of a given type. GET /resto/api/v2/entities/{entityType}",
       {"type": "object", "properties": {"entity_type": {"type": "string", "description": "Entity type name (e.g. 'contractors', 'priceCategories')"}}, "required": ["entity_type"]})
@@ -248,7 +229,6 @@ async def get_entities_handler(args):
     if not et:
         return {"error": "entity_type parameter is required"}
     return await iiko.request("GET", f"/resto/api/v2/entities/{et}")
-
 
 @tool("get_entity_by_id", "Get a single entity by type and ID. GET /resto/api/v2/entities/{entityType}/{id}",
       {"type": "object", "properties": {
@@ -262,16 +242,13 @@ async def get_entity_by_id_handler(args):
         return {"error": "entity_type and id parameters are required"}
     return await iiko.request("GET", f"/resto/api/v2/entities/{et}/{eid}")
 
-
 @tool("get_stores", "Get all stores (warehouses). GET /resto/api/corporation/stores/")
 async def get_stores_handler(args):
     return await iiko.request("GET", "/resto/api/corporation/stores/")
 
-
 @tool("get_contractors", "Get all contractors (suppliers/counterparties). GET /resto/api/v2/entities/contractors")
 async def get_contractors_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/contractors")
-
 
 # ─── Documents ───────────────────────────────────────────────────────────────
 
@@ -284,7 +261,6 @@ async def get_incoming_invoices_handler(args):
     return await iiko.request("GET", "/resto/api/documents/export/incomingInvoice",
                               params={"from": args["from_date"], "to": args["to_date"]})
 
-
 @tool("get_outgoing_invoices", "Get outgoing invoices for a date range. Dates in DD.MM.YYYY format.",
       {"type": "object", "properties": {
           "from_date": {"type": "string", "description": "Start date DD.MM.YYYY"},
@@ -294,7 +270,6 @@ async def get_outgoing_invoices_handler(args):
     return await iiko.request("GET", "/resto/api/documents/export/outgoingInvoice",
                               params={"from": args["from_date"], "to": args["to_date"]})
 
-
 @tool("get_incoming_invoice_by_id", "Get a single incoming invoice by document ID.",
       {"type": "object", "properties": {"document_id": {"type": "string", "description": "Document UUID"}}, "required": ["document_id"]})
 async def get_incoming_invoice_by_id_handler(args):
@@ -303,7 +278,6 @@ async def get_incoming_invoice_by_id_handler(args):
         return {"error": "document_id is required"}
     return await iiko.request("GET", f"/resto/api/documents/export/incomingInvoice/byId/{doc_id}")
 
-
 @tool("get_outgoing_invoice_by_id", "Get a single outgoing invoice by document ID.",
       {"type": "object", "properties": {"document_id": {"type": "string", "description": "Document UUID"}}, "required": ["document_id"]})
 async def get_outgoing_invoice_by_id_handler(args):
@@ -311,7 +285,6 @@ async def get_outgoing_invoice_by_id_handler(args):
     if not doc_id:
         return {"error": "document_id is required"}
     return await iiko.request("GET", f"/resto/api/documents/export/outgoingInvoice/byId/{doc_id}")
-
 
 @tool("get_waste_documents", "Get waste/write-off documents for a date range. Dates in DD.MM.YYYY format.",
       {"type": "object", "properties": {
@@ -322,11 +295,9 @@ async def get_waste_documents_handler(args):
     return await iiko.request("GET", "/resto/api/documents/export/waste",
                               params={"from": args["from_date"], "to": args["to_date"]})
 
-
 @tool("get_menu_changes", "Get menu change documents. GET /resto/api/v2/documents/menuChange")
 async def get_menu_changes_handler(args):
     return await iiko.request("GET", "/resto/api/v2/documents/menuChange")
-
 
 @tool("get_menu_change_by_id", "Get a single menu change document by ID.",
       {"type": "object", "properties": {"id": {"type": "string", "description": "Menu change document UUID"}}, "required": ["id"]})
@@ -336,13 +307,11 @@ async def get_menu_change_by_id_handler(args):
         return {"error": "id parameter is required"}
     return await iiko.request("GET", "/resto/api/v2/documents/menuChange/byId", params={"id": doc_id})
 
-
 # ─── Recipes / Assembly Charts ──────────────────────────────────────────────
 
 @tool("get_assembly_charts", "Get all assembly charts (tech cards / recipes). GET /resto/api/v2/assemblyCharts/getAll")
 async def get_assembly_charts_handler(args):
     return await iiko.request("GET", "/resto/api/v2/assemblyCharts/getAll")
-
 
 @tool("get_assembly_chart_by_id", "Get a single assembly chart (tech card) by ID. GET /resto/api/v2/assemblyCharts/byId",
       {"type": "object", "properties": {
@@ -353,7 +322,6 @@ async def get_assembly_chart_by_id_handler(args):
     if not chart_id:
         return {"error": "id parameter is required"}
     return await iiko.request("GET", "/resto/api/v2/assemblyCharts/byId", params={"id": chart_id})
-
 
 @tool("save_assembly_chart", "Create or update an assembly chart (tech card). POST /resto/api/v2/assemblyCharts/save. "
       "Body must include: id (UUID), name, groupId, productId, outputProductId, amount, outputAmount, "
@@ -367,18 +335,15 @@ async def save_assembly_chart_handler(args):
         return {"error": "body parameter is required"}
     return await iiko.request("POST", "/resto/api/v2/assemblyCharts/save", json_body=body)
 
-
 # ─── Cash & Payments ────────────────────────────────────────────────────────
 
 @tool("get_payment_types", "Get payment types. GET /resto/api/v2/paymentTypes")
 async def get_payment_types_handler(args):
     return await iiko.request("GET", "/resto/api/v2/paymentTypes")
 
-
 @tool("get_cash_shifts", "Get cash shifts list. GET /resto/api/v2/cashshifts/list")
 async def get_cash_shifts_handler(args):
     return await iiko.request("GET", "/resto/api/v2/cashshifts/list")
-
 
 @tool("get_cash_shift", "Get a single cash shift by session ID.",
       {"type": "object", "properties": {"session_id": {"type": "string", "description": "Cash shift session UUID"}}, "required": ["session_id"]})
@@ -388,7 +353,6 @@ async def get_cash_shift_handler(args):
         return {"error": "session_id is required"}
     return await iiko.request("GET", f"/resto/api/v2/cashshifts/byId/{sid}")
 
-
 @tool("get_payments", "Get payments for a cash shift session.",
       {"type": "object", "properties": {"session_id": {"type": "string", "description": "Cash shift session UUID"}}, "required": ["session_id"]})
 async def get_payments_handler(args):
@@ -396,7 +360,6 @@ async def get_payments_handler(args):
     if not sid:
         return {"error": "session_id is required"}
     return await iiko.request("GET", f"/resto/api/v2/cashshifts/payments/list/{sid}")
-
 
 @tool("get_payment", "Get a single payment by session ID and payment ID.",
       {"type": "object", "properties": {
@@ -411,7 +374,6 @@ async def get_payment_handler(args):
     return await iiko.request("GET", "/resto/api/v2/cashshifts/payments/byId",
                               params={"sessionId": sid, "id": pid})
 
-
 @tool("create_encashment", "Create an encashment (cash in/out) entry. POST /resto/api/v2/cashshifts/save",
       {"type": "object", "properties": {
           "session_id": {"type": "string", "description": "Cash shift session UUID"},
@@ -425,13 +387,11 @@ async def create_encashment_handler(args):
     body = {"sessionId": sid, "sum": enc_sum}
     return await iiko.request("POST", "/resto/api/v2/cashshifts/save", json_body=body)
 
-
 # ─── Prices ──────────────────────────────────────────────────────────────────
 
 @tool("get_price_categories", "Get all price categories. GET /resto/api/v2/entities/priceCategories")
 async def get_price_categories_handler(args):
     return await iiko.request("GET", "/resto/api/v2/entities/priceCategories")
-
 
 @tool("get_price_category", "Get a single price category by ID.",
       {"type": "object", "properties": {"id": {"type": "string", "description": "Price category UUID"}}, "required": ["id"]})
@@ -440,7 +400,6 @@ async def get_price_category_handler(args):
     if not cid:
         return {"error": "id parameter is required"}
     return await iiko.request("GET", "/resto/api/v2/entities/priceCategories/byId", params={"id": cid})
-
 
 # ─── Reports & OLAP ─────────────────────────────────────────────────────────
 
@@ -451,7 +410,6 @@ async def get_olap_columns_handler(args):
     if not rt:
         return {"error": "report_type is required"}
     return await iiko.request("GET", "/resto/api/v2/reports/olap/columns", params={"reportType": rt})
-
 
 @tool("run_olap_report", "Run an OLAP report. POST /resto/api/v2/reports/olap. Dates in DD.MM.YYYY format.",
       {"type": "object", "properties": {
@@ -471,11 +429,9 @@ async def run_olap_report_handler(args):
     }
     return await iiko.request("POST", "/resto/api/v2/reports/olap", json_body=body)
 
-
 @tool("get_olap_presets", "Get saved OLAP report presets. GET /resto/api/v2/reports/olap/presets")
 async def get_olap_presets_handler(args):
     return await iiko.request("GET", "/resto/api/v2/reports/olap/presets")
-
 
 @tool("run_olap_by_preset", "Run an OLAP report by preset ID. Dates in DD.MM.YYYY format.",
       {"type": "object", "properties": {
@@ -490,7 +446,6 @@ async def run_olap_by_preset_handler(args):
     return await iiko.request("GET", f"/resto/api/v2/reports/olap/byPresetId/{pid}",
                               params={"from": args["from_date"], "to": args["to_date"]})
 
-
 @tool("run_custom_report", "Run a custom report by name. Dates in DD.MM.YYYY format.",
       {"type": "object", "properties": {
           "report_name": {"type": "string", "description": "Custom report name"},
@@ -503,7 +458,6 @@ async def run_custom_report_handler(args):
         return {"error": "report_name is required"}
     return await iiko.request("GET", "/api/0/reports/custom",
                               params={"report": rname, "from": args["from_date"], "to": args["to_date"]})
-
 
 # ─── Raw ─────────────────────────────────────────────────────────────────────
 
@@ -547,7 +501,6 @@ async def get_venues_revenue_handler(args):
         }
     return result
 
-
 @tool("get_staff_meals", "Get staff meals (бесплатные / без оплаты) for a date. Returns by-employee breakdown.",
       {"type": "object", "properties": {
           "date": {"type": "string", "description": "Date YYYY-MM-DD. Defaults to today."}
@@ -583,7 +536,6 @@ async def get_staff_meals_handler(args):
         
         return {"date": date_str, "venues": by_venue}
     return result
-
 
 @tool("get_top_dishes", "Get top-selling dishes for a date. Sorted by revenue.",
       {"type": "object", "properties": {
@@ -624,7 +576,6 @@ async def get_top_dishes_handler(args):
             "top": [{"dish": d["DishName"], "revenue": d["DishDiscountSumInt"]} for d in sorted_dishes]
         }
     return result
-
 
 @tool("compare_revenue", "Compare revenue between two dates for all venues.",
       {"type": "object", "properties": {
@@ -674,7 +625,6 @@ async def compare_revenue_handler(args):
             "total": diff_pct(r1["total"], r2["total"])
         }
     }
-
 
 @tool("get_checks", "Get checks (orders) for a venue by date. Returns OrderNum, CloseTime, amount, payment type, masked card number.",
       {"type": "object", "properties": {
@@ -740,37 +690,24 @@ async def get_revenue_at_time_handler(args):
     if not kassa:
         return {"error": "kassa is required"}
 
-    # Fetch checks via get_checks handler
+    # Fetch checks via get_checks handler (returns dict with "checks" key)
     checks_result = await get_checks_handler({"date": date, "kassa": int(kassa)})
     if isinstance(checks_result, dict) and "error" in checks_result:
         return checks_result
 
-    import logging; logging.error("DEBUG revenue_at_time: checks_result type=%s", type(checks_result).__name__)
-    if isinstance(checks_result, dict):
-        logging.error("DEBUG revenue keys=%s", list(checks_result.keys()))
-        if "checks" in checks_result:
-            c = checks_result["checks"]
-            logging.error("DEBUG checks type=%s len=%s", type(c).__name__, len(c) if isinstance(c, (list,dict)) else "?")
-            if isinstance(c, list) and c:
-                logging.error("DEBUG check[0] keys=%s", list(c[0].keys()) if isinstance(c[0], dict) else type(c[0]))
-    # get_checks_handler returns dict with "checks" key (list of dicts)
-    if isinstance(checks_result, dict):
-        checks = checks_result.get("checks", [])
-    elif isinstance(checks_result, list):
-        checks = checks_result
-    else:
-        checks = []
+    checks = (checks_result.get("checks", []) if isinstance(checks_result, dict)
+              else checks_result if isinstance(checks_result, list)
+              else [])
 
-    # Each check has: "order", "time" (HH:MM), "amount", "payment_type", "card"
+    # Each check has: "time" (ISO "2026-07-28T12:12"), "amount" (int)
     revenue = 0
     count = 0
     for check in checks:
         if not isinstance(check, dict):
             continue
-        check_time = str(check.get("CloseTime", ""))[:5]  # "12:30" from "12:30" or "2026-07-28T12:30"
+        check_time = str(check.get("time", ""))[11:16]  # extract HH:MM from ISO datetime
         if check_time and check_time <= target_time:
-            amount = check.get("amount", 0) or 0
-            revenue += amount
+            revenue += check.get("amount", 0) or 0
             count += 1
 
     return {
@@ -780,6 +717,8 @@ async def get_revenue_at_time_handler(args):
         "revenue": revenue,
         "checks_count": count
     }
+
+
 async def raw_request_handler(args):
     method = args.get("method", "GET").upper()
     path = args.get("path", "")
@@ -788,7 +727,6 @@ async def raw_request_handler(args):
     if not path:
         return {"error": "path is required"}
     return await iiko.request(method, path, params=params, json_body=body)
-
 
 # ─── MCP Server ─────────────────────────────────────────────────────────────
 
@@ -800,7 +738,6 @@ def serialize_result(data: Any) -> str:
         return json.dumps(data, ensure_ascii=False, indent=2, default=str)
     except Exception:
         return str(data)
-
 
 async def run_server():
     server = Server("iiko-mcp")
@@ -840,7 +777,6 @@ async def run_server():
             await server.run(read_stream, write_stream, server.create_initialization_options())
     finally:
         await iiko.stop()
-
 
 if __name__ == "__main__":
     asyncio.run(run_server())
