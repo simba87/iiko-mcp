@@ -710,6 +710,19 @@ async def get_revenue_at_time_handler(args):
             revenue += check.get("amount", 0) or 0
             count += 1
 
+    # DEBUG: write to file for diagnosis (stderr is swallowed by MCP stdio)
+    with open("/tmp/revenue_debug.log", "a") as _f:
+        _f.write(f"\n=== get_revenue_at_time ===\n")
+        _f.write(f"args: date={date} kassa={kassa} time={target_time}\n")
+        _f.write(f"checks_result type={type(checks_result).__name__}\n")
+        if isinstance(checks_result, dict):
+            _f.write(f"checks_result keys={list(checks_result.keys())}\n")
+        _f.write(f"checks len={len(checks)}\n")
+        if checks:
+            _f.write(f"check[0]={checks[0]}\n")
+            _f.write(f"time_slice={str(checks[0].get('time',''))[11:16]}\n")
+        _f.write(f"revenue={revenue} count={count}\n")
+
     return {
         "date": date,
         "kassa": int(kassa),
