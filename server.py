@@ -754,9 +754,9 @@ async def get_revenue_at_time_handler(args):
     for check in checks:
         if not isinstance(check, dict):
             continue
-        check_time = str(check.get("time", ""))[:5]  # "12:30" from "12:30" or "2026-07-28T12:30"
+        check_time = str(check.get("CloseTime", ""))[:5]  # "12:30" from "12:30" or "2026-07-28T12:30"
         if check_time and check_time <= target_time:
-            amount = check.get("amount", 0) or 0
+            amount = check.get("sum", 0) or 0
             revenue += amount
             count += 1
 
