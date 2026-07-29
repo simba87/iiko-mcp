@@ -722,6 +722,51 @@ async def get_checks_handler(args):
             } for c in checks]
         }
     return result
+@tool("get_revenue_at_time", "Get revenue up to a specific time. Args: date, kassa, time (HH:MM).")
+async def get_revenue_at_time_handler(args):
+    """Get revenue up to a specific time on a given date."""
+    from datetime import datetime, timezone, timedelta
+    msk = timezone(timedelta(hours=3))
+    now = datetime.now(msk)
+    date = args.get("date") or now.strftime("%Y-%m-%d")
+    kassa = args.get("kassa")
+    target_time = args.get("time") or now.strftime("%H:%M")
+
+    if not kassa:
+        return {"error": "kassa is required"}
+
+    # Fetch checks via get_checks handler
+    checks_result = await get_checks_handler({"date": date, "kassa": int(kassa)})
+    if isinstance(checks_result, dict) and "error" in checks_result:
+        return checks_result
+
+    # get_checks_handler returns dict with "checks" key (list of dicts)
+    if isinstance(checks_result, dict):
+        checks = checks_result.get("checks", [])
+    elif isinstance(checks_result, list):
+        checks = checks_result
+    else:
+        checks = []
+
+    # Each check has: "order", "time" (HH:MM), "amount", "payment_type", "card"
+    revenue = 0
+    count = 0
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        check_time = str(check.get("time", ""))[:5]  # "12:30" from "12:30" or "2026-07-28T12:30"
+        if check_time and check_time <= target_time:
+            amount = check.get("amount", 0) or 0
+            revenue += amount
+            count += 1
+
+    return {
+        "date": date,
+        "kassa": int(kassa),
+        "time": target_time,
+        "revenue": revenue,
+        "checks_count": count
+    }
 
 @tool("get_revenue_at_time", "Get revenue up to a specific time. Args: date (YYYY-MM-DD), kassa (4=PP, 5=Desu), time (HH:MM). Defaults to today/now.")
 async def get_revenue_at_time_handler(args):
