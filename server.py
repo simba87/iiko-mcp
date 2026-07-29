@@ -723,12 +723,7 @@ async def get_checks_handler(args):
         }
     return result
 
-@tool("get_revenue_at_time", "Get revenue up to a specific time on a given date. Filters checks where CloseTime <= target_time and sums the amounts.",
-      params={
-          "date": {"type": "string", "description": "Date in YYYY-MM-DD format. Defaults to today (Moscow time)."},
-          "kassa": {"type": "integer", "description": "Cash register: 4=Пойду/Поем, 5=Дэсу."},
-          "time": {"type": "string", "description": "Target time in HH:MM format. Defaults to current Moscow time."}
-      })
+@tool("get_revenue_at_time", "Get revenue up to a specific time. Args: date (YYYY-MM-DD), kassa (4=PP, 5=Desu), time (HH:MM). Defaults to today/now.")
 async def get_revenue_at_time_handler(args):
     """Get revenue up to a specific time on a given date."""
     from datetime import datetime, timezone, timedelta
