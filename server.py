@@ -679,44 +679,40 @@ async def get_checks_handler(args):
           "time": {"type": "string", "description": "Target time HH:MM. Defaults to now."}
       }, "required": ["kassa"]})
 async def get_revenue_at_time_handler(args):
+    """Get revenue up to a specific time on a given date."""
     from datetime import datetime, timezone, timedelta
     msk = timezone(timedelta(hours=3))
     now = datetime.now(msk)
-    date_str = args.get("date") or now.strftime("%Y-%m-%d")
-    kassa = int(args.get("kassa") or 0)
+    date = args.get("date") or now.strftime("%Y-%m-%d")
+    kassa = args.get("kassa")
     target_time = args.get("time") or now.strftime("%H:%M")
     if not kassa:
         return {"error": "kassa is required"}
 
-    next_day = (datetime.strptime(date_str, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+    # Use get_checks_handler which returns {"checks": [{"time": "2026-07-27T11:48", "amount": 1930, ...}, ...]}
+    checks_result = await get_checks_handler({"date": date, "kassa": int(kassa)})
+    if isinstance(checks_result, dict) and "error" in checks_result:
+        return checks_result
 
-    body = {
-        "aggregateFields": ["DishDiscountSumInt"],
-        "filters": {
-            "OpenDate.Typed": {"filterType": "DateRange", "from": f"{date_str}T00:00:00", "to": f"{next_day}T00:00:00", "includeLow": True, "includeHigh": False, "periodType": "CUSTOM"},
-            "CashRegisterName.Number": {"filterType": "IncludeValues", "values": [kassa]},
-            "DeletedWithWriteoff": {"filterType": "IncludeValues", "values": ["NOT_DELETED"]},
-            "OrderDeleted": {"filterType": "IncludeValues", "values": ["NOT_DELETED"]}
-        },
-        "groupByRowFields": ["OrderNum", "PayTypes", "CardNumber", "CloseTime"],
-        "reportType": "SALES"
-    }
+    checks = (checks_result.get("checks", []) if isinstance(checks_result, dict)
+              else checks_result if isinstance(checks_result, list)
+              else [])
 
-    result = await iiko.request("POST", "/resto/api/v2/reports/olap", json_body=body)
-    if not isinstance(result, dict) or "data" not in result:
-        return {"error": "unexpected response", "response": result}
-
+    # "time" is ISO "2026-07-27T11:48" -> extract HH:MM with [11:16]
+    # "amount" is integer sum in roubles
     revenue = 0
     count = 0
-    for row in result["data"]:
-        close_time = str(row.get("CloseTime", ""))[11:16]
-        if close_time and close_time <= target_time:
-            revenue += row.get("DishDiscountSumInt", 0) or 0
+    for check in checks:
+        if not isinstance(check, dict):
+            continue
+        check_time = str(check.get("time", ""))[11:16]
+        if check_time and check_time <= target_time:
+            revenue += check.get("amount", 0) or 0
             count += 1
 
     return {
-        "date": date_str,
-        "kassa": kassa,
+        "date": date,
+        "kassa": int(kassa),
         "time": target_time,
         "revenue": revenue,
         "checks_count": count
