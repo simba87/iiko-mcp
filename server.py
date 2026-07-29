@@ -745,6 +745,14 @@ async def get_revenue_at_time_handler(args):
     if isinstance(checks_result, dict) and "error" in checks_result:
         return checks_result
 
+    import logging; logging.error("DEBUG revenue_at_time: checks_result type=%s", type(checks_result).__name__)
+    if isinstance(checks_result, dict):
+        logging.error("DEBUG revenue keys=%s", list(checks_result.keys()))
+        if "checks" in checks_result:
+            c = checks_result["checks"]
+            logging.error("DEBUG checks type=%s len=%s", type(c).__name__, len(c) if isinstance(c, (list,dict)) else "?")
+            if isinstance(c, list) and c:
+                logging.error("DEBUG check[0] keys=%s", list(c[0].keys()) if isinstance(c[0], dict) else type(c[0]))
     # get_checks_handler returns dict with "checks" key (list of dicts)
     if isinstance(checks_result, dict):
         checks = checks_result.get("checks", [])
