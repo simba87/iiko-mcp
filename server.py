@@ -706,21 +706,6 @@ async def get_revenue_at_time_handler(args):
     # First call OLAP directly
     result = await iiko.request("POST", "/resto/api/v2/reports/olap", json_body=body)
 
-    # DEBUG: log raw result
-    import json
-    with open("/tmp/revenue_raw.log", "a") as _f:
-        _f.write(f"\n=== args={date} kassa={kassa} time={target_time}\n")
-        _f.write(f"result_type={type(result).__name__}\n")
-        if isinstance(result, dict):
-            _f.write(f"keys={list(result.keys())}\n")
-            if "data" in result:
-                _f.write(f"data_len={len(result['data'])}\n")
-                if result["data"]:
-                    _f.write(f"row0={result['data'][0]}\n")
-                    _f.write(f"row0_CloseTime={result['data'][0].get('CloseTime','N/A')}\n")
-        else:
-            _f.write(f"result={str(result)[:200]}\n")
-
     if not isinstance(result, dict) or "data" not in result:
         return {"date": date, "kassa": int(kassa), "time": target_time, "revenue": 0, "checks_count": 0, "error": "no data"}
 
@@ -728,8 +713,8 @@ async def get_revenue_at_time_handler(args):
     revenue = 0
     count = 0
     for row in result["data"]:
-        # CloseTime in OLAP raw data is "HH:MM:SS" (not ISO)
-        ct = str(row.get("CloseTime", ""))[:5]
+        # CloseTime in OLAP raw data is ISO "2026-07-27T11:48:54.825" -> extract HH:MM
+        ct = str(row.get("CloseTime", ""))[11:16]
         if ct and ct <= target_time:
             revenue += float(row.get("DishDiscountSumInt", 0) or 0)
             count += 1
