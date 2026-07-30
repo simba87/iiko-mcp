@@ -689,45 +689,41 @@ async def get_revenue_at_time_handler(args):
     if not kassa:
         return {"error": "kassa is required"}
 
-    # Use get_checks_handler which returns {"checks": [{"time": "2026-07-27T11:48", "amount": 1930, ...}, ...]}
-    checks_result = await get_checks_handler({"date": date, "kassa": int(kassa)})
-    if isinstance(checks_result, dict) and "error" in checks_result:
-        return checks_result
+    # Direct OLAP call (same as get_checks_handler does internally)
+    next_day = (datetime.strptime(date, "%Y-%m-%d") + timedelta(days=1)).strftime("%Y-%m-%d")
+    body = {
+        "aggregateFields": ["DishDiscountSumInt"],
+        "filters": {
+            "OpenDate.Typed": {"filterType": "DateRange", "from": f"{date}T00:00:00", "to": f"{next_day}T00:00:00", "includeLow": True, "includeHigh": False, "periodType": "CUSTOM"},
+            "CashRegisterName.Number": {"filterType": "IncludeValues", "values": [int(kassa)]},
+            "DeletedWithWriteoff": {"filterType": "IncludeValues", "values": ["NOT_DELETED"]},
+            "OrderDeleted": {"filterType": "IncludeValues", "values": ["NOT_DELETED"]}
+        },
+        "groupByRowFields": ["OrderNum", "PayTypes", "CardNumber", "CloseTime"],
+        "reportType": "SALES"
+    }
 
-    checks = (checks_result.get("checks", []) if isinstance(checks_result, dict)
-              else checks_result if isinstance(checks_result, list)
-              else [])
+    # First call OLAP directly
+    result = await iiko.request("POST", "/resto/api/v2/reports/olap", json_body=body)
 
-    # "time" is ISO "2026-07-27T11:48" -> extract HH:MM with [11:16]
-    # "amount" is integer sum in roubles
+    if not isinstance(result, dict) or "data" not in result:
+        return {"date": date, "kassa": int(kassa), "time": target_time, "revenue": 0, "checks_count": 0, "error": "no data"}
+
+    # Parse OLAP response directly
     revenue = 0
     count = 0
-    for check in checks:
-        if not isinstance(check, dict):
-            continue
-        check_time = str(check.get("time", ""))[11:16]
-        if check_time and check_time <= target_time:
-            revenue += check.get("amount", 0) or 0
+    for row in result["data"]:
+        # CloseTime in OLAP raw data is "HH:MM:SS" (not ISO)
+        ct = str(row.get("CloseTime", ""))[:5]
+        if ct and ct <= target_time:
+            revenue += float(row.get("DishDiscountSumInt", 0) or 0)
             count += 1
-
-    # DEBUG: write to file for diagnosis (stderr is swallowed by MCP stdio)
-    with open("/tmp/revenue_debug.log", "a") as _f:
-        _f.write(f"\n=== get_revenue_at_time ===\n")
-        _f.write(f"args: date={date} kassa={kassa} time={target_time}\n")
-        _f.write(f"checks_result type={type(checks_result).__name__}\n")
-        if isinstance(checks_result, dict):
-            _f.write(f"checks_result keys={list(checks_result.keys())}\n")
-        _f.write(f"checks len={len(checks)}\n")
-        if checks:
-            _f.write(f"check[0]={checks[0]}\n")
-            _f.write(f"time_slice={str(checks[0].get('time',''))[11:16]}\n")
-        _f.write(f"revenue={revenue} count={count}\n")
 
     return {
         "date": date,
         "kassa": int(kassa),
         "time": target_time,
-        "revenue": revenue,
+        "revenue": round(revenue, 2),
         "checks_count": count
     }
 
